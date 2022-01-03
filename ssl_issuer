@@ -1,0 +1,163 @@
+#!/bin/bash
+# Issue SSL certificate to domain
+# Credits goes to https://github.com/acmesh-official/acme.sh for acme tool
+shopt -s expand_aliases
+cat <<EOT
+########################################################################
+#                             ssl_issuer                               #
+#        This is wrapper script makes it easy to deploy ssl certs      #
+#        All credits goes to https://github.com/Neilpang               #
+#        https://github.com/acmesh-official/acme.sh                    #
+########################################################################
+EOT
+function installacme() {
+  # Ask user e-mail
+  read -rep $'Please enter your email (will be used for renewal process):\n' inputmail
+  printf "Installing acme.sh..."
+  {
+    # Preparing install acme.sh (only 1 time)
+    wget -qO acme.zip https://github.com/acmesh-official/acme.sh/archive/refs/heads/master.zip
+    unzip -qq acme.zip && cd acme.sh-master
+    ./acme.sh --install --home /opt/acme --accountemail "$inputmail"
+  } > /dev/null
+  printf ' Done !\n'
+}
+tempfile=$(mktemp --suffix=.log "/tmp/acme-XXXXXXXXX")
+aliasfile=$(grep -sil --exclude=".bash_history" "acme.sh.env" $HOME/.*)
+eval "$(grep "acme.sh.env" $aliasfile | tail -1)"
+trap 'echo -ne "\033[0m"' EXIT
+
+# Check if acme.sh is already installed
+if ! command -v acme.sh &> /dev/null; then
+  read -s -n1 -p 'acme.sh is not yet installed, would you like to install it? (y/n)' acmeinschoice
+  echo
+  case "$acmeinschoice" in
+    [Yy]* ) installacme;;
+    [Nn]* ) echo "Aborted"; exit 0;;
+    * ) echo "Invalid choice"; exit 0;;
+  esac
+fi
+
+# Prompt for webserver of choice
+function yousure {
+  if [[ $(ps -acx | grep apache | wc -l) > 0 ]]; then
+    wserver_temp="apache2"
+    if [[ $wserver_temp != $wserver ]]; then
+      # Not match
+      while [[ ! $wserveryn =~ ^[yYnN]$ ]]; do
+        read -s -n1 -p 'You select nginx, but we detect that you have apache2 running. Do you wish to proceed ? (y/n)' wserveryn
+        echo
+        case $wserveryn in
+          [Yy]* ) echo "Ok"; break;;
+          [Nn]* ) echo "Exiting..."; exit 1;;
+          * ) echo "Invalid input" >&2;;
+        esac
+      done
+    fi
+  fi
+  if [[ $(ps -acx | grep nginx | wc -l) > 0 ]]; then
+    wserver_temp="nginx"
+    if [[ $wserver_temp != $wserver ]]; then
+      # Not match
+      while [[ ! $wserveryn =~ ^[yYnN]$ ]]; do
+        read -s -n1 -p 'You select apache2, but we detect that you have nginx running. Do you wish to proceed ? (y/n)' wserveryn
+        echo
+        case $wserveryn in
+          [Yy]* ) echo "Ok"; break;;
+          [Nn]* ) echo "Exiting..."; exit 1;;
+          * ) echo "Invalid input" >&2;;
+        esac
+      done
+    fi
+  fi
+}
+PS3='Select your current webserver: '
+options=("apache2" "nginx" "quit")
+select wserver in "${options[@]}"; do
+  case "$wserver" in
+    "apache2") yousure; break;;
+    "nginx") yousure; break;;
+    "quit") exit 1;;
+  esac
+done
+# Domain validation
+read -p 'Please enter your domain (FQDN): ' inputdomain
+while ! host $inputdomain 2>&1 > /dev/null; do
+  echo "Domain is not valid FQDN" '!'
+  read -p 'Please enter your domain (FQDN): ' inputdomain
+done
+# Webroot
+echo "Typically webroot reside in /var/www (e.g. /var/www/mysite)"
+read -ep 'Enter your webroot directory: ' inputwebroot
+while ! [ -d "$inputwebroot" ]; do
+  echo "Directory $inputwebroot does not exist" '!'
+  read -ep 'Enter your webroot directory: ' inputwebroot
+done
+# Preferred server
+echo "Please specify your preferred server, you can see some list here https://github.com/acmesh-official/acme.sh/wiki/Server"
+read -p 'Enter (default letsencrypt): ' defserver
+defserver=${defserver:-letsencrypt}
+# Summary result
+cat <<EOT
+#####################################
+Your domain is $inputdomain
+Your webroot is $inputwebroot
+Your server is $defserver
+#####################################
+EOT
+while [[ ! $userconfirm =~ ^[yYnN]$ ]]; do
+  read -n1 -s -p 'Continue ? (y/n)' userconfirm
+  echo
+  case $userconfirm in
+    [Yy]* ) :; break;;
+    [Nn]* ) echo "Aborting"; exit 1;;
+    * ) echo "Invalid input" >&2;;
+  esac
+done
+# Check available daemon control
+if ! command -v systemctl &>/dev/null; then
+  reloadcmd="service ${wserver} force-reload"
+else
+  reloadcmd="systemctl force-reload ${wserver}"
+fi
+# Issue certificate
+printf "Issuing cert, please wait up to 5 minute...."
+acme.sh --issue -d $inputdomain -w $inputwebroot --server $defserver >> $tempfile 2>&1
+if [ $? -eq 0 ]; then
+  printf " Success ! Relevant log are stored on %s" "$tempfile"
+else
+  printf " Failed ! Please check %s to diagnose problem\n" "$tempfile"
+  exit 1
+fi
+# Installing cert
+[ ! -d "/opt/acme-cert/$inputdomain" ] && mkdir -p "/opt/acme-cert/$inputdomain"
+{
+  echo
+  acme.sh --install-cert -d $inputdomain \
+  --cert-file      "/opt/acme-cert/$inputdomain/cert.pem" \
+  --key-file       "/opt/acme-cert/$inputdomain/site.key"  \
+  --fullchain-file "/opt/acme-cert/$inputdomain/fullchain.cer" \
+  --reloadcmd     "$reloadcmd"
+} >> $tempfile 2>&1
+# Separator
+echo; printf %.1s \#{1..120} $'\n'
+
+# Paste to conf
+if [ $wserver = "apache2" ]; then
+  echo "Your ssl certificate is ready to use" '!' "Please paste this configuration below to your virtualhost"
+  echo -ne "\033[1;37m"
+  cat <<EOF
+SSLCertificateFile /opt/acme-cert/$inputdomain/cert.pem
+SSLCertificateKeyFile /opt/acme-cert/$inputdomain/site.key
+SSLCertificateChainFile /opt/acme-cert/$inputdomain/fullchain.cer
+EOF
+fi
+if [ $wserver = "nginx" ]; then
+  echo "Your ssl certificate is ready to use" '!' "Please paste this configuration below to your nginx server block"
+  echo -ne "\033[1;37m"
+  cat <<EOF
+ssl_certificate /opt/acme-cert/$inputdomain/fullchain.cer;
+ssl_certificate_key /opt/acme-cert/$inputdomain/site.key;
+EOF
+fi
+echo -ne "\033[0m"
