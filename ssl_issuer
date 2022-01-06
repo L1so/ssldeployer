@@ -44,12 +44,13 @@ function yousure {
     wserver_temp="apache2"
     if [[ $wserver_temp != $wserver ]]; then
       # Not match
-      while [[ ! $wserveryn =~ ^[yYnN]$ ]]; do
-        read -s -n1 -p 'You select nginx, but we detect that you have apache2 running. Do you wish to proceed ? (y/n)' wserveryn
+      while [[ ! $wserveryn =~ ^[yYnNpP]$ ]]; do
+        read -s -n1 -p 'You select nginx, but we detect that you have apache2 running. Do you wish to proceed ? (Press p to use apache2 instead) (y/n/p)' wserveryn
         echo
         case $wserveryn in
-          [Yy]* ) echo "Ok"; break;;
+          [Yy]* ) wserver="nginx"; echo "Ok"; break;;
           [Nn]* ) echo "Exiting..."; exit 1;;
+          [Pp]* ) wserver="$wserver_temp"; break;;
           * ) echo "Invalid input" >&2;;
         esac
       done
@@ -60,11 +61,12 @@ function yousure {
     if [[ $wserver_temp != $wserver ]]; then
       # Not match
       while [[ ! $wserveryn =~ ^[yYnN]$ ]]; do
-        read -s -n1 -p 'You select apache2, but we detect that you have nginx running. Do you wish to proceed ? (y/n)' wserveryn
+        read -s -n1 -p 'You select apache2, but we detect that you have nginx running. Do you wish to proceed ? (Press p to use nginx instead) (y/n/p)' wserveryn
         echo
         case $wserveryn in
-          [Yy]* ) echo "Ok"; break;;
+          [Yy]* ) wserver="apache2"; echo "Ok"; break;;
           [Nn]* ) echo "Exiting..."; exit 1;;
+          [Pp]* ) wserver="$wserver_temp"; break;;
           * ) echo "Invalid input" >&2;;
         esac
       done
