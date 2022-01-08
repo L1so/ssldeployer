@@ -22,10 +22,24 @@ function installacme() {
   } > /dev/null
   printf ' Done !\n'
 }
+function shutdown() {
+  rm $tempfile
+  echo -ne "\033[0m"
+  echo "Quitting..." >&2
+}
+trap shutdown EXIT
 tempfile=$(mktemp --suffix=.log "/tmp/acme-XXXXXXXXX")
-aliasfile=$(grep -sil --exclude=".bash_history" "acme.sh.env" $HOME/.*)
-eval "$(grep "acme.sh.env" $aliasfile | tail -1)"
-trap 'echo -ne "\033[0m"' EXIT
+if aliasfile=$(grep -sil --exclude=".bash_history" "acme.sh.env" $HOME/.*); then
+  eval "$(grep "acme.sh.env" $aliasfile | tail -1)"
+else
+  read -s -n1 -p 'acme.sh is not yet installed, would you like to install it? (y/n)' acmeinschoice
+  echo
+  case "$acmeinschoice" in
+    [Yy]* ) installacme;;
+    [Nn]* ) echo "Aborted"; exit 0;;
+    * ) echo "Invalid choice"; exit 1;;
+  esac
+fi
 
 # Check if acme.sh is already installed
 if ! command -v acme.sh &> /dev/null; then
