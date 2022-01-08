@@ -19,7 +19,10 @@ function installacme() {
     wget -qO acme.zip https://github.com/acmesh-official/acme.sh/archive/refs/heads/master.zip
     unzip -qq acme.zip && cd acme.sh-master
     ./acme.sh --install --home /opt/acme --accountemail "$inputmail"
-  } > /dev/null
+  } > /dev/null 2>&1
+  if aliasfile=$(grep -sil --exclude=".bash_history" "acme.sh.env" $HOME/.*); then
+    . $aliasfile
+  fi
   printf ' Done !\n'
 }
 function shutdown() {
@@ -31,6 +34,14 @@ trap shutdown EXIT
 tempfile=$(mktemp --suffix=.log "/tmp/acme-XXXXXXXXX")
 if aliasfile=$(grep -sil --exclude=".bash_history" "acme.sh.env" $HOME/.*); then
   eval "$(grep "acme.sh.env" $aliasfile | tail -1)"
+elif ! command -v acme.sh &> /dev/null; then
+  read -s -n1 -p 'acme.sh is not yet installed, would you like to install it? (y/n)' acmeinschoice
+  echo
+  case "$acmeinschoice" in
+    [Yy]* ) installacme;;
+    [Nn]* ) echo "Aborted"; exit 0;;
+    * ) echo "Invalid choice"; exit 0;;
+  esac
 else
   read -s -n1 -p 'acme.sh is not yet installed, would you like to install it? (y/n)' acmeinschoice
   echo
@@ -38,17 +49,6 @@ else
     [Yy]* ) installacme;;
     [Nn]* ) echo "Aborted"; exit 0;;
     * ) echo "Invalid choice"; exit 1;;
-  esac
-fi
-
-# Check if acme.sh is already installed
-if ! command -v acme.sh &> /dev/null; then
-  read -s -n1 -p 'acme.sh is not yet installed, would you like to install it? (y/n)' acmeinschoice
-  echo
-  case "$acmeinschoice" in
-    [Yy]* ) installacme;;
-    [Nn]* ) echo "Aborted"; exit 0;;
-    * ) echo "Invalid choice"; exit 0;;
   esac
 fi
 
