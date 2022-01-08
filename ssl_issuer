@@ -19,27 +19,22 @@ function installacme() {
     wget -qO acme.zip https://github.com/acmesh-official/acme.sh/archive/refs/heads/master.zip
     unzip -qq acme.zip && cd acme.sh-master
     ./acme.sh --install --home /opt/acme --accountemail "$inputmail"
-  } > /dev/null
-  aliasfile=$(grep -sil --exclude=".bash_history" "acme.sh.env" $HOME/.*)
-  eval "$(grep "acme.sh.env" $aliasfile | tail -1)"
+  } > /dev/null 2>&1
+  eval "$(grep -h "acme.sh.env" "$HOME/.profile" "$HOME/.bashrc" | tail -1)"
   printf ' Done !\n'
-}
-# Check if acme.sh is already installed
-if ! grep -sil --exclude=".bash_history" "acme.sh.env" $HOME/.*; then
-  if ! command -v acme.sh &> /dev/null; then
-    read -s -n1 -p 'acme.sh is not yet installed, would you like to install it? (y/n)' acmeinschoice
+  while [[ ! $carryon =~ ^[yYnN]$ ]]; do
+    read -s -n1 -p 'Do you want to continue setup ssl ? (y/n)' carryon
     echo
-    case "$acmeinschoice" in
-      [Yy]* ) installacme;;
-      [Nn]* ) echo "Aborted"; exit 0;;
-      * ) echo "Invalid choice"; exit 0;;
+    case $carryon in
+      [Yy]* ) return 0;;
+      [Nn]* ) exit 1;;
+      * ) echo "Invalid input" >&2;;
     esac
-  fi
-else
-  aliasfile=$(grep -sil --exclude=".bash_history" "acme.sh.env" $HOME/.*)
-  eval "$(grep "acme.sh.env" $aliasfile | tail -1)"
-fi
+  done
+}
 tempfile=$(mktemp --suffix=.log "/tmp/acme-XXXXXXXXX")
+aliasfile=$(grep -sil --exclude=".bash_history" "acme.sh.env" $HOME/.*)
+[ -n "$aliasfile" ] && eval "$(grep "acme.sh.env" $aliasfile | tail -1)"
 function shutdown() {
   rm $tempfile
   echo -ne "\033[0m"
@@ -47,6 +42,16 @@ function shutdown() {
 }
 trap shutdown EXIT
 
+# Check if acme.sh is already installed
+if ! command -v acme.sh &> /dev/null; then
+  read -s -n1 -p 'acme.sh is not yet installed, would you like to install it? (y/n)' acmeinschoice
+  echo
+  case "$acmeinschoice" in
+    [Yy]* ) installacme;;
+    [Nn]* ) echo "Aborted"; exit 0;;
+    * ) echo "Invalid choice"; exit 0;;
+  esac
+fi
 
 # Prompt for webserver of choice
 function yousure {
