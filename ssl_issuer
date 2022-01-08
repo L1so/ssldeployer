@@ -20,23 +20,33 @@ function installacme() {
     unzip -qq acme.zip && cd acme.sh-master
     ./acme.sh --install --home /opt/acme --accountemail "$inputmail"
   } > /dev/null
+  aliasfile=$(grep -sil --exclude=".bash_history" "acme.sh.env" $HOME/.*)
+  eval "$(grep "acme.sh.env" $aliasfile | tail -1)"
   printf ' Done !\n'
 }
-tempfile=$(mktemp --suffix=.log "/tmp/acme-XXXXXXXXX")
-aliasfile=$(grep -sil --exclude=".bash_history" "acme.sh.env" $HOME/.*)
-eval "$(grep "acme.sh.env" $aliasfile | tail -1)"
-trap 'echo -ne "\033[0m"' EXIT
-
 # Check if acme.sh is already installed
-if ! command -v acme.sh &> /dev/null; then
-  read -s -n1 -p 'acme.sh is not yet installed, would you like to install it? (y/n)' acmeinschoice
-  echo
-  case "$acmeinschoice" in
-    [Yy]* ) installacme;;
-    [Nn]* ) echo "Aborted"; exit 0;;
-    * ) echo "Invalid choice"; exit 0;;
-  esac
+if ! grep -sil --exclude=".bash_history" "acme.sh.env" $HOME/.*; then
+  if ! command -v acme.sh &> /dev/null; then
+    read -s -n1 -p 'acme.sh is not yet installed, would you like to install it? (y/n)' acmeinschoice
+    echo
+    case "$acmeinschoice" in
+      [Yy]* ) installacme;;
+      [Nn]* ) echo "Aborted"; exit 0;;
+      * ) echo "Invalid choice"; exit 0;;
+    esac
+  fi
+else
+  aliasfile=$(grep -sil --exclude=".bash_history" "acme.sh.env" $HOME/.*)
+  eval "$(grep "acme.sh.env" $aliasfile | tail -1)"
 fi
+tempfile=$(mktemp --suffix=.log "/tmp/acme-XXXXXXXXX")
+function shutdown() {
+  rm $tempfile
+  echo -ne "\033[0m"
+  echo "Quitting..." >&2
+}
+trap shutdown EXIT
+
 
 # Prompt for webserver of choice
 function yousure {
