@@ -194,7 +194,7 @@ echo; printf %.1s \#{1..120} $'\n'
 if [ $wserver = "apache2" ]; then
   echo "Your ssl certificate is ready to use" '!' "Please paste this configuration below to your virtualhost"
   echo -ne "\033[1;37m"
-  cat <<EOF
+  tee -a "${tempfile%.*}_config.${tempfile##*.}" <<EOF
 SSLCertificateFile /opt/acme-cert/$inputdomain/cert.pem
 SSLCertificateKeyFile /opt/acme-cert/$inputdomain/site.key
 SSLCertificateChainFile /opt/acme-cert/$inputdomain/fullchain.cer
@@ -203,7 +203,7 @@ fi
 if [ $wserver = "nginx" ]; then
   echo "Your ssl certificate is ready to use" '!' "Please paste this configuration below to your nginx server block"
   echo -ne "\033[1;37m"
-  cat <<EOF
+  tee -a "${tempfile%.*}_config.${tempfile##*.}" <<EOF
 ssl_certificate /opt/acme-cert/$inputdomain/fullchain.cer;
 ssl_certificate_key /opt/acme-cert/$inputdomain/site.key;
 EOF
