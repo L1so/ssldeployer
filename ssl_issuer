@@ -66,12 +66,12 @@ function installacme() {
 tempfile=$(mktemp --suffix=.log "$HOME/.ssldeployer/acme-XXXXXXXXX")
 aliasfile=$(grep -sil --exclude=".bash_history" "acme.sh.env" $HOME/.*)
 [ -n "$aliasfile" ] && eval "$(grep "acme.sh.env" $aliasfile | tail -1)"
-function shutdown() {
+function unexshd() {
   rm $tempfile
   echo -ne "\033[0m"
-  echo "Quitting..." >&2
+  echo "Quitting cleanly..." >&2
 }
-trap shutdown EXIT
+trap unexshd SIGINT
 
 # Check if acme.sh is already installed
 if ! command -v acme.sh &> /dev/null; then
