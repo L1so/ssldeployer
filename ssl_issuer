@@ -1,6 +1,36 @@
 #!/bin/bash
 # Issue SSL certificate to domain
 # Credits goes to https://github.com/acmesh-official/acme.sh for acme tool
+function spinner() {
+  local Wh='\033[1;37m'
+  local Chk="\033[1;32m[\xE2\x9C\x94]"
+  local Nc='\033[0m' # Reset color
+  local LC_CTYPE=C
+  local pid=$!
+  local narrate="$1"
+  local spin='-\|/'
+  local charwidth=1
+  local i=0
+  tput civis # cursor invisible
+  printf "%b" "$narrate"; tput sc
+  {
+    while kill -0 $pid 2>/dev/null; do
+      local i=$(((i + $charwidth) % ${#spin}))
+      tput rc; tput cuf 1
+      printf "%b" "${Wh}${spin:$i:$charwidth}" "\b" 2>/dev/null
+      sleep .1
+      tput ech 1
+    done
+  } 2>/dev/null
+  tput cnorm
+  wait $pid # capture exit code
+  local rv=$?
+  if [ "$rv" -eq 0 ]; then
+    printf "%b\n" "${Chk}${Nc}"
+  fi
+  return $rv
+}
+# END SPINNER FUNCTION
 shopt -s expand_aliases
 cat <<EOT
 ########################################################################
@@ -32,7 +62,8 @@ function installacme() {
     esac
   done
 }
-tempfile=$(mktemp --suffix=.log "/tmp/acme-XXXXXXXXX")
+[ -d "$HOME/.ssldeployer" ] || mkdir --parents "$HOME/.ssldeployer"
+tempfile=$(mktemp --suffix=.log "$HOME/.ssldeployer/acme-XXXXXXXXX")
 aliasfile=$(grep -sil --exclude=".bash_history" "acme.sh.env" $HOME/.*)
 [ -n "$aliasfile" ] && eval "$(grep "acme.sh.env" $aliasfile | tail -1)"
 function shutdown() {
@@ -138,8 +169,8 @@ else
   reloadcmd="systemctl force-reload ${wserver}"
 fi
 # Issue certificate
-printf "Issuing cert, please wait up to 5 minute...."
-acme.sh --issue -d $inputdomain -w $inputwebroot --server $defserver >> $tempfile 2>&1
+{ acme.sh --issue -d $inputdomain -w $inputwebroot --server $defserver >> $tempfile 2>&1; } &
+spinner "Issuing cert, please wait up to 5 minute"
 if [ $? -eq 0 ]; then
   printf " Success ! Relevant log are stored on %s" "$tempfile"
 else
