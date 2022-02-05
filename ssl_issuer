@@ -47,11 +47,11 @@ function installacme() {
   {
     # Preparing install acme.sh (only 1 time)
     wget -qO acme.zip https://github.com/acmesh-official/acme.sh/archive/refs/heads/master.zip
-    unzip -qq acme.zip && cd acme.sh-master
-    ./acme.sh --install --home /opt/acme --accountemail "$inputmail"
+    unzip -qq acme.zip && \
+    ./acme.sh-master/acme.sh --install --home /opt/acme --accountemail "$inputmail"
   } > /dev/null 2>&1
   eval "$(grep -h "acme.sh.env" "$HOME/.profile" "$HOME/.bashrc" | tail -1)"
-  printf ' Done !\n'
+  [ $? -eq 0 ] && printf ' Done !\n' && rm -r acme.sh-master acme.zip
   while [[ ! $carryon =~ ^[yYnN]$ ]]; do
     read -s -n1 -p 'Do you want to continue setup ssl ? (y/n)' carryon
     echo
