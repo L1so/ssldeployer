@@ -1,5 +1,5 @@
 #!/bin/bash
-# Issue SSL certificate to domain
+# Issue SSL certificate to aksad
 # Credits goes to https://github.com/acmesh-official/acme.sh for acme tool
 function spinner() {
   local Wh='\033[1;37m'
@@ -61,6 +61,15 @@ function installacme() {
       * ) echo "Invalid input" >&2;;
     esac
   done
+}
+function cbsystem() {
+  if command -v cb > /dev/null 2>&1; then
+    cbcommand="cb"
+  elif command -v xclip > /dev/null 2>&1; then
+    cbcommand="xclip -sel c"
+  elif command -v xsel > /dev/null 2>&1; then
+    cbcommand="xsel -ib"
+  fi
 }
 [ -d "$HOME/.ssldeployer" ] || mkdir --parents "$HOME/.ssldeployer"
 tempfile=$(mktemp --suffix=.log "$HOME/.ssldeployer/acme-XXXXXXXXX")
@@ -189,12 +198,26 @@ fi
 } >> $tempfile 2>&1
 # Separator
 echo; printf %.1s \#{1..120} $'\n'
+# Check if clipboard system is present
+if [ $DISPLAY ]; then
+  if { command -v xclip || command -v xsel; } > /dev/null 2>&1; then
+    while [[ ! $userconfirm =~ ^[yYnN]$ ]]; do
+      read -n1 -s -p 'Do you want to copy the configuration ? (y/n)' userconfirm
+      echo
+      case $userconfirm in
+        [Yy]* ) cbsystem; break;;
+        [Nn]* ) :; break;;
+        * ) echo "Invalid input" >&2;;
+      esac
+    done
+  fi
+fi
 
 # Paste to conf
 if [ $wserver = "apache2" ]; then
   echo "Your ssl certificate is ready to use" '!' "Please paste this configuration below to your virtualhost"
   echo -ne "\033[1;37m"
-  tee -a "${tempfile%.*}_config.${tempfile##*.}" <<EOF
+  tee -a "${tempfile%.*}_config.${tempfile##*.}" >($cbcommand) <<EOF
 SSLCertificateFile /opt/acme-cert/$inputdomain/cert.pem
 SSLCertificateKeyFile /opt/acme-cert/$inputdomain/site.key
 SSLCertificateChainFile /opt/acme-cert/$inputdomain/fullchain.cer
@@ -203,7 +226,7 @@ fi
 if [ $wserver = "nginx" ]; then
   echo "Your ssl certificate is ready to use" '!' "Please paste this configuration below to your nginx server block"
   echo -ne "\033[1;37m"
-  tee -a "${tempfile%.*}_config.${tempfile##*.}" <<EOF
+  tee -a "${tempfile%.*}_config.${tempfile##*.}" >($cbcommand) <<EOF
 ssl_certificate /opt/acme-cert/$inputdomain/fullchain.cer;
 ssl_certificate_key /opt/acme-cert/$inputdomain/site.key;
 EOF
