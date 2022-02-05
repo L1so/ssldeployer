@@ -79,6 +79,7 @@ function unexshd() {
   rm $tempfile
   echo -ne "\033[0m"
   echo "Quitting cleanly..." >&2
+  exit 1
 }
 trap unexshd SIGINT
 
