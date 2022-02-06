@@ -82,6 +82,7 @@ function unexshd() {
   exit 1
 }
 trap unexshd SIGINT
+trap 'echo -ne "\033[0m"' EXIT
 
 # Check if acme.sh is already installed
 if ! command -v acme.sh &> /dev/null; then
