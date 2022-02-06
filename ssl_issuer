@@ -42,7 +42,10 @@ cat <<EOT
 EOT
 function installacme() {
   # Ask user e-mail
-  read -rep $'Please enter your email (will be used for renewal process):\n' inputmail
+  read -ep 'Please enter your email (will be used for renewal process): ' inputmail
+  while [ -z "$inputmail" ]; do
+    read -ep 'Input cannot be blank: ' inputmail
+  done
   printf "Installing acme.sh..."
   {
     # Preparing install acme.sh (only 1 time)
@@ -241,7 +244,7 @@ EOF
 )
   } 5>&1
 fi
-if [ $isusercopy = "yes" ]; then
+if [ "$isusercopy" = "yes" ]; then
   printf "%s" "$copiedtext" | $cbcommand
   [ $? -eq 0 ] && echo "Copied to clipboard" '!'
 fi
