@@ -206,7 +206,7 @@ if [ $DISPLAY ]; then
       read -n1 -s -p 'Do you want to copy the configuration ? (y/n)' userconfirm
       echo
       case $userconfirm in
-        [Yy]* ) cbsystem; break;;
+        [Yy]* ) isusercopy="yes"; cbsystem;;
         [Nn]* ) :; break;;
         * ) echo "Invalid input" >&2;;
       esac
@@ -218,18 +218,30 @@ fi
 if [ $wserver = "apache2" ]; then
   echo "Your ssl certificate is ready to use" '!' "Please paste this configuration below to your virtualhost"
   echo -ne "\033[1;37m"
-  tee -a "${tempfile%.*}_config.${tempfile##*.}" >(printf %s "$(< /dev/stdin)" | $cbcommand) <<EOF
+  {
+    copiedtext=$(
+    tee "${tempfile%.*}_config.${tempfile##*.}" /dev/fd/5 <<EOF
 SSLCertificateFile /opt/acme-cert/$inputdomain/cert.pem
 SSLCertificateKeyFile /opt/acme-cert/$inputdomain/site.key
 SSLCertificateChainFile /opt/acme-cert/$inputdomain/fullchain.cer
 EOF
+)
+  } 5>&1
 fi
 if [ $wserver = "nginx" ]; then
   echo "Your ssl certificate is ready to use" '!' "Please paste this configuration below to your nginx server block"
   echo -ne "\033[1;37m"
-  tee -a "${tempfile%.*}_config.${tempfile##*.}" >(printf %s "$(< /dev/stdin)" | $cbcommand) <<EOF
+  {
+    copiedtext=$(
+    tee "${tempfile%.*}_config.${tempfile##*.}" /dev/fd/5 <<EOF
 ssl_certificate /opt/acme-cert/$inputdomain/fullchain.cer;
 ssl_certificate_key /opt/acme-cert/$inputdomain/site.key;
 EOF
+)
+  } 5>&1
+fi
+if [ $isusercopy = "yes" ]; then
+  printf "%s" "$copiedtext" | $cbcommand
+  [ $? -eq 0 ] && echo "Copied to clipboard" '!'
 fi
 echo -ne "\033[0m"
