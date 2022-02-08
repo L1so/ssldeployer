@@ -206,10 +206,10 @@ echo; printf %.1s \#{1..120} $'\n'
 # Check if clipboard system is present
 if [ $DISPLAY ]; then
   if { command -v xclip || command -v xsel; } > /dev/null 2>&1; then
-    while [[ ! $userconfirm =~ ^[yYnN]$ ]]; do
-      read -n1 -s -p 'Do you want to copy the configuration ? (y/n)' userconfirm
+    while [[ ! $copyconfirm =~ ^[yYnN]$ ]]; do
+      read -n1 -s -p 'Do you want to copy the configuration ? (y/n)' copyconfirm
       echo
-      case $userconfirm in
+      case $copyconfirm in
         [Yy]* ) isusercopy="yes"; cbsystem;;
         [Nn]* ) :; break;;
         * ) echo "Invalid input" >&2;;
