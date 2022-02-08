@@ -76,7 +76,7 @@ function cbsystem() {
 }
 [ -d "$HOME/.ssldeployer" ] || mkdir --parents "$HOME/.ssldeployer"
 tempfile=$(mktemp --suffix=.log "$HOME/.ssldeployer/acme-XXXXXXXXX")
-aliasfile=$(grep -sil --exclude=".bash_history" "acme.sh.env" $HOME/.*)
+aliasfile=$(grep -sil --exclude=".bash_history" --exclude=\*.backup --exclude=\*.bak "acme.sh.env" $HOME/.*)
 [ -n "$aliasfile" ] && eval "$(grep "acme.sh.env" $aliasfile | tail -1)"
 function unexshd() {
   rm $tempfile
@@ -246,6 +246,6 @@ EOF
 fi
 if [ "$isusercopy" = "yes" ]; then
   printf "%s" "$copiedtext" | $cbcommand
-  [ $? -eq 0 ] && echo "Copied to clipboard" '!'
+  [ $? -eq 0 ] && echo -e "\033[1;32mCopied to clipboard" '!'
 fi
 echo -ne "\033[0m"
