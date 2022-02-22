@@ -1,5 +1,5 @@
 #!/bin/bash
-# Issue SSL certificate to aksad
+# Issue SSL certificate with acme.sh
 # Credits goes to https://github.com/acmesh-official/acme.sh for acme tool
 function spinner() {
   local Wh='\033[1;37m'
@@ -75,7 +75,7 @@ function cbsystem() {
   fi
 }
 [ -d "$HOME/.ssldeployer" ] || mkdir --parents "$HOME/.ssldeployer"
-tempfile=$(mktemp --suffix=.log "$HOME/.ssldeployer/acme-XXXXXXXXX")
+tempfile=$(mktemp --suffix=.log "$HOME/.ssldeployer/${inputdomain}-XXXXXXXXX")
 aliasfile=$(grep -sil --exclude=".bash_history" --exclude=\*.backup --exclude=\*.bak "acme.sh.env" $HOME/.*)
 [ -n "$aliasfile" ] && eval "$(grep "acme.sh.env" $aliasfile | tail -1)"
 function unexshd() {
