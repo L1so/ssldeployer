@@ -1,4 +1,5 @@
 #!/bin/bash
+# Try except
 # Issue SSL certificate with acme.sh
 # Credits goes to https://github.com/acmesh-official/acme.sh for acme tool
 function spinner() {
