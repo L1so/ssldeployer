@@ -144,7 +144,7 @@ select wserver in "${options[@]}"; do
 done
 # Domain validation
 read -p 'Please enter your domain (FQDN): ' inputdomain
-while ! host $inputdomain 2>&1 > /dev/null; do
+while ! ping -qc1 $inputdomain 2>&1 > /dev/null; do
   echo "Domain is not valid FQDN" '!'
   read -p 'Please enter your domain (FQDN): ' inputdomain
 done
@@ -246,6 +246,6 @@ EOF
 fi
 if [ "$isusercopy" = "yes" ]; then
   printf "%s" "$copiedtext" | $cbcommand
-  [ $? -eq 0 ] && echo -e "\033[1;32mCopied to clipboard" '!'
+  [ $? -eq 0 ] && echo -e "\033[1;32mCopied to clipboard" '!' "\033[0m"
 fi
 echo -ne "\033[0m"
