@@ -32,6 +32,10 @@ function spinner() {
   return $rv
 }
 # END SPINNER FUNCTION
+  if ! command -v host >/dev/null 2>&1; then
+    printf "%s\n" "Command `host` does not exist, quitting.."
+    exit 2
+  fi
 shopt -s expand_aliases
 cat <<EOT
 ########################################################################
@@ -41,7 +45,7 @@ cat <<EOT
 #        https://github.com/acmesh-official/acme.sh                    #
 ########################################################################
 EOT
-function installacme() {
+installacme() {
   # Ask user e-mail
   read -ep 'Please enter your email (will be used for renewal process): ' inputmail
   while [ -z "$inputmail" ]; do
@@ -66,7 +70,7 @@ function installacme() {
     esac
   done
 }
-function cbsystem() {
+cbsystem() {
   if command -v cb > /dev/null 2>&1; then
     cbcommand="cb"
   elif command -v xclip > /dev/null 2>&1; then
@@ -79,7 +83,7 @@ function cbsystem() {
 tempfile=$(mktemp --suffix=.log "$HOME/.ssldeployer/${inputdomain}-XXXXXXXXX")
 aliasfile=$(grep -sil --exclude=".bash_history" --exclude=\*.backup --exclude=\*.bak "acme.sh.env" $HOME/.*)
 [ -n "$aliasfile" ] && eval "$(grep "acme.sh.env" $aliasfile | tail -1)"
-function unexshd() {
+unexshd() {
   rm $tempfile
   echo -ne "\033[0m"
   echo "Quitting cleanly..." >&2
@@ -100,7 +104,7 @@ if ! command -v acme.sh &> /dev/null; then
 fi
 
 # Prompt for webserver of choice
-function yousure {
+yousure {
   if [[ $(ps -acx | grep apache | wc -l) > 0 ]]; then
     wserver_temp="apache2"
     if [[ $wserver_temp != $wserver ]]; then
@@ -134,31 +138,40 @@ function yousure {
     fi
   fi
 }
-PS3='Select your current webserver: '
-options=("apache2" "nginx" "quit")
-select wserver in "${options[@]}"; do
-  case "$wserver" in
-    "apache2") yousure; break;;
-    "nginx") yousure; break;;
-    "quit") exit 1;;
-  esac
-done
-# Domain validation
-read -p 'Please enter your domain (FQDN): ' inputdomain
-while ! ping -qc1 $inputdomain 2>&1 > /dev/null; do
-  echo "Domain is not valid FQDN" '!'
+if [ -f "${PWD}/issuer.conf" ]; then
+  # Use environment variable from issuer.conf
+  . ${PWD}/issuer.conf
+  if ! host -W 1 $inputdomain >/dev/null 2>&1; then
+    printf "%s\n" "$inputdomain is not valid FQDN !"
+    exit 2
+  fi
+else
+  PS3='Select your current webserver: '
+  options=("apache2" "nginx" "quit")
+  select wserver in "${options[@]}"; do
+    case "$wserver" in
+      "apache2") yousure; break;;
+      "nginx") yousure; break;;
+      "quit") exit 1;;
+    esac
+  done
+  # Domain validation
   read -p 'Please enter your domain (FQDN): ' inputdomain
-done
-# Webroot
-echo "Typically webroot reside in /var/www (e.g. /var/www/mysite)"
-read -ep 'Enter your webroot directory: ' inputwebroot
-while ! [ -d "$inputwebroot" ]; do
-  echo "Directory $inputwebroot does not exist" '!'
+  while ! host -W 1 $inputdomain 2>&1 > /dev/null; do
+    echo "Domain is not valid FQDN" '!'
+    read -p 'Please enter your domain (FQDN): ' inputdomain
+  done
+  # Webroot
+  echo "Typically webroot reside in /var/www (e.g. /var/www/mysite)"
   read -ep 'Enter your webroot directory: ' inputwebroot
-done
-# Preferred server
-echo "Please specify your preferred server, you can see some list here https://github.com/acmesh-official/acme.sh/wiki/Server"
-read -p 'Enter (default letsencrypt): ' defserver
+  while ! [ -d "$inputwebroot" ]; do
+    echo "Directory $inputwebroot does not exist" '!'
+    read -ep 'Enter your webroot directory: ' inputwebroot
+  done
+  # Preferred server
+  echo "Please specify your preferred server, you can see some list here https://github.com/acmesh-official/acme.sh/wiki/Server"
+  read -p 'Enter (default letsencrypt): ' defserver
+fi
 defserver=${defserver:-letsencrypt}
 # Summary result
 cat <<EOT
