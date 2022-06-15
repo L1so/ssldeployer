@@ -104,7 +104,7 @@ if ! command -v acme.sh &> /dev/null; then
 fi
 
 # Prompt for webserver of choice
-yousure {
+yousure() {
   if [[ $(ps -acx | grep apache | wc -l) > 0 ]]; then
     wserver_temp="apache2"
     if [[ $wserver_temp != $wserver ]]; then
