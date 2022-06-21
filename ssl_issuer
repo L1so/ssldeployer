@@ -174,13 +174,9 @@ else
 fi
 defserver=${defserver:-letsencrypt}
 # Summary result
-cat <<EOT
-#####################################
-Your domain is $inputdomain
-Your webroot is $inputwebroot
-Your server is $defserver
-#####################################
-EOT
+printf '%.1s' -{1..37} $'\n'
+printf "%-15s : %-10s\n" "Website URL" "$inputdomain" "Webroot path" "$inputwebroot" "ACME Server" "$defserver"
+printf '%.1s' -{1..37} $'\n'
 while [[ ! $userconfirm =~ ^[yYnN]$ ]]; do
   read -n1 -s -p 'Continue ? (y/n)' userconfirm
   echo

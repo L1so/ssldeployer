@@ -1,0 +1,14 @@
+# THIS FILE CONTAIN ENVIRONMENT VARIABLE FOR ssldeployer
+# You may rename this file to issuer.conf
+
+# Currently used webserver
+wserver="" # e.g. apache2
+
+# Your website url
+inputdomain="" # e.g. example.com
+
+# Webroot location
+inputwebroot="" # e.g. /var/www/html/myproject
+
+# Acme server to use (full list https://github.com/acmesh-official/acme.sh/wiki/Server)
+defserver="" # e.g. letsencrypt, zerossl
