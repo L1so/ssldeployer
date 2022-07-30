@@ -87,10 +87,11 @@ unexshd() {
   rm $tempfile
   echo -ne "\033[0m"
   echo "Quitting cleanly..." >&2
+  echo -ne "\033[0m"
+  tput cnorm
   exit 1
 }
-trap unexshd SIGINT
-trap 'echo -ne "\033[0m"' EXIT
+trap unexshd 0 1 2 3 6 15
 
 # Check if acme.sh is already installed
 if ! command -v acme.sh &> /dev/null; then
