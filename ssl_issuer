@@ -2,6 +2,10 @@
 # Try except
 # Issue SSL certificate with acme.sh
 # Credits goes to https://github.com/acmesh-official/acme.sh for acme tool
+if [[ $EUID -ne 0 ]]; then
+   echo "This script must be run as root" 1>&2
+   exit 1
+fi
 function spinner() {
   local Wh='\033[1;37m'
   local Chk="\033[1;32m[\xE2\x9C\x94]"
